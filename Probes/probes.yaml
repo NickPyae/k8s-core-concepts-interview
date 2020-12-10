@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  labels:
+    app: db
+  #namespace: sams
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: db
+          image: arangodb:3.6.4
+          env:
+            - name: ARANGO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sams-env
+                  key: ARANGO_ROOT_PASSWORD
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /external/health/status
+              port: 8529
+            initialDelaySeconds: 120
+            periodSeconds: 3
+            timeoutSeconds: 30
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: arangodb-db-container
+  #namespace: sams
+spec:
+  selector:
+    app: db
+  type: NodePort
+  ports:
+    - name: db
+      port: 8529
+      targetPort: 8529
+      nodePort: 30029
